@@ -2,7 +2,7 @@
 
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
-from windows_mcp.powershell import PowerShellExecutor
+from windows_mcp.powershell import PowerShellExecutor, check_command
 from fastmcp import Context
 
 
@@ -20,6 +20,14 @@ def register(mcp, *, get_desktop, get_analytics):
     )
     @with_analytics(get_analytics(), "Powershell-Tool")
     def powershell_tool(command: str, timeout: int = 30, ctx: Context = None) -> str:
+        # Hardened fork: refuse known-destructive commands before execution.
+        # The guard is a conservative speed bump, not a sandbox; operators can
+        # disable it via WINDOWS_MCP_POWERSHELL_GUARD=off. A refusal keeps the
+        # tool's Response/Status Code shape so callers can parse it like any
+        # other failed command (403 = blocked by policy, not by the shell).
+        refusal = check_command(command)
+        if refusal is not None:
+            return f"Response: {refusal}\nStatus Code: 403"
         try:
             response, status_code = PowerShellExecutor.execute_command(command, timeout)
             return f"Response: {response}\nStatus Code: {status_code}"
