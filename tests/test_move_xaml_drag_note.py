@@ -3,7 +3,11 @@
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "windows_mcp" / "tools" / "input.py"
-README = Path(__file__).resolve().parents[1] / "README.md"
+# Fork note: the upstream README moved to docs/UPSTREAM_README.md (the root
+# README is now the hardened-fork overview). The documentation contract still
+# applies -- the XAML drag limit must live somewhere durable -- so it is
+# checked against the moved file.
+README = Path(__file__).resolve().parents[1] / "docs" / "UPSTREAM_README.md"
 
 
 def test_move_description_mentions_xaml_shell_surfaces():
