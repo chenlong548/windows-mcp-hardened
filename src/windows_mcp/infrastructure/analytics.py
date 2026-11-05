@@ -43,10 +43,14 @@ class Analytics(Protocol):
 
 class PostHogAnalytics:
     USER_DATA_DIR = CONFIG_DIR
-    API_KEY = os.environ.get(
-        "POSTHOG_API_KEY",
-        "phc_uxdCItyVTjXNU0sMPr97dq3tcz39scQNt3qjTYw5vLV",
-    )
+    # Hardened fork change: upstream bundled a PostHog public key as the
+    # default here, so a default install reported tool usage to the upstream
+    # project's PostHog instance out of the box. This fork ships no key:
+    # telemetry only runs when the operator explicitly opts in via
+    # ANONYMIZED_TELEMETRY=true AND provides their own POSTHOG_API_KEY
+    # (see windows_mcp.__main__._telemetry_enabled). An empty key is already
+    # handled gracefully below (client stays None, tracking becomes a no-op).
+    API_KEY = os.environ.get("POSTHOG_API_KEY", "")
     HOST = os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com")
 
     def __init__(self):

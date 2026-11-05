@@ -202,6 +202,29 @@ def _watchdog_enabled() -> bool:
     return value.strip().lower() in {"on", "1", "true", "yes", "enabled"}
 
 
+def _telemetry_enabled() -> bool:
+    """Whether anonymous telemetry should run. Opt-in, off by default.
+
+    Hardened fork change: upstream enabled PostHog telemetry unless
+    ANONYMIZED_TELEMETRY was set to ``false``, and bundled its own API key,
+    so a default install reported tool usage to the upstream project's
+    PostHog instance. This fork flips the default: telemetry stays off
+    unless the operator opts in by setting ANONYMIZED_TELEMETRY to an
+    enabling value. Opting in also requires providing their own
+    POSTHOG_API_KEY, since the bundled key was removed in this fork.
+
+    Enabling values (case-insensitive, whitespace-trimmed): ``on``, ``1``,
+    ``true``, ``yes``, ``enabled``. Unset, or anything else, leaves it off.
+
+    Returns:
+        ``True`` when telemetry should be initialized, ``False`` otherwise.
+    """
+    value = os.getenv("ANONYMIZED_TELEMETRY")
+    if value is None:
+        return False
+    return value.strip().lower() in {"on", "1", "true", "yes", "enabled"}
+
+
 def _exit_missing_dependency(exc: ModuleNotFoundError) -> NoReturn:
     """Report a missing runtime dependency on stderr and exit non-zero.
 
@@ -337,8 +360,13 @@ def _build_mcp() -> FastMCP:
         nonlocal control_loop
         control_loop = asyncio.get_running_loop()
 
-        if os.getenv("ANONYMIZED_TELEMETRY", "true").lower() != "false":
+        if _telemetry_enabled():
             analytics = PostHogAnalytics()
+        else:
+            logger.debug(
+                "Telemetry disabled (hardened fork default; opt in via "
+                "ANONYMIZED_TELEMETRY=true plus your own POSTHOG_API_KEY)"
+            )
         desktop = Desktop()
         screen_size = desktop.get_screen_size()
 
