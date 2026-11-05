@@ -225,6 +225,27 @@ def _telemetry_enabled() -> bool:
     return value.strip().lower() in {"on", "1", "true", "yes", "enabled"}
 
 
+def _app_version() -> str:
+    """Return the installed windows-mcp distribution version.
+
+    Hardened fork fix: upstream created FastMCP without ``version=``, so the
+    MCP ``initialize`` response reported the *fastmcp library's* version in
+    ``serverInfo`` (observed: fastmcp 4.1.3 while the app was 0.8.8) instead
+    of the application release. Passing ``version=`` makes ``serverInfo``
+    reflect the actual windows-mcp release, which is what clients use for
+    compatibility decisions and support triage.
+
+    Falls back to ``"0.0.0"`` when the distribution metadata is unavailable
+    (e.g. running from an unpackaged source tree).
+    """
+    try:
+        from importlib.metadata import version as pkg_version
+
+        return pkg_version("windows-mcp")
+    except Exception:
+        return "0.0.0"
+
+
 def _exit_missing_dependency(exc: ModuleNotFoundError) -> NoReturn:
     """Report a missing runtime dependency on stderr and exit non-zero.
 
@@ -404,7 +425,12 @@ def _build_mcp() -> FastMCP:
                         await analytics.close()
                     control_loop = None
 
-    _mcp = FastMCP(name="windows-mcp", instructions=instructions, lifespan=lifespan)
+    _mcp = FastMCP(
+        name="windows-mcp",
+        version=_app_version(),
+        instructions=instructions,
+        lifespan=lifespan,
+    )
     _mcp.add_middleware(ControlToolGate(controller, notifier))
     register_all(_mcp, get_desktop=_get_desktop, get_analytics=_get_analytics)
     return _mcp
