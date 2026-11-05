@@ -199,6 +199,13 @@ def test_safe_get_ignores_dns_that_changes_after_validation(monkeypatch) -> None
         monkeypatch.setattr(
             "windows_mcp.infrastructure.security._is_private_target", lambda ip: False
         )
+        # This test exercises the pinned *direct* connection. On a machine
+        # with a proxy configured (env vars or the Windows registry, which
+        # requests consults via getproxies), the request would terminate at
+        # the proxy instead of the pinned IP and this test would fail with
+        # the proxy's status code. Force a proxy-less environment; the
+        # proxied path has its own dedicated test below.
+        monkeypatch.setattr("requests.utils.getproxies", lambda: {})
 
         response = safe_get(f"http://rebind.example:{port}/page", timeout=5)
 

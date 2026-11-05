@@ -41,9 +41,14 @@ Based on upstream v0.8.8, `main` @ `556067c` (CursorTouch/Windows-MCP).
 - 86 new tests (telemetry 24, guard 57, version 5) in upstream pytest style.
 - One upstream test adapted: the README moved to `docs/UPSTREAM_README.md`,
   so the Issue #506 documentation contract now checks the moved file.
-- Full suite: 895 passed, 8 skipped on the audit machine (desktop-dependent
-  tests included; the one README-contract failure was the path adaptation
-  above).
+- Three test-environment fixes so the suite is green outside a clean
+  English CI box: the `_build_mcp()` version test now mocks the input
+  controller (the real one leaked global state and flaked later tests in
+  full-suite order); the CLIXML test skips on non-English Windows UI
+  languages; the SSRF rebind test pins a proxy-less environment (both
+  env-var and Windows-registry proxies are bypassed via `requests.utils.getproxies`).
+- Full suite on the audit machine (zh-CN Windows 11, system proxy on):
+  **1660 passed, 9 skipped, 0 failed**.
 
 ### Known upstream characteristics (unchanged, measured 2026-11)
 

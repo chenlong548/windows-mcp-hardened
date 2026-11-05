@@ -57,7 +57,26 @@ def test_decode_clixml_keeps_unparseable_document():
     assert decode_clixml(text) == '<Objs Version="1.1.0.1"><S S="Error">a</Objs>'
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="runs Windows PowerShell")
+def _user_ui_language_is_english() -> bool:
+    """True when the Windows UI language is English (LCID 0x0409).
+
+    The assertion below pins the *English* wording of PowerShell's error
+    text. On a localized install (e.g. zh-CN) PowerShell 5.1 emits the
+    localized message, so the text can never match there regardless of the
+    CLIXML decoding under test.
+    """
+    try:
+        import ctypes
+
+        return int(ctypes.windll.kernel32.GetUserDefaultUILanguage()) == 0x0409
+    except Exception:
+        return True  # cannot tell -> let the test run and speak for itself
+
+
+@pytest.mark.skipif(
+    sys.platform != "win32" or not _user_ui_language_is_english(),
+    reason="asserts the English error text; localized Windows emits a localized message",
+)
 def test_failing_command_returns_readable_error():
     output, status = PowerShellExecutor.execute_command(
         "Get-Item -LiteralPath 'C:\\windows-mcp-no-such-item'", shell="powershell"

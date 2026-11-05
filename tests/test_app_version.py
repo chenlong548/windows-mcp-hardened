@@ -41,11 +41,22 @@ class TestFastMCPPlumbing:
         mcp = FastMCP(name="plumbing-check", version="9.9.9")
         assert mcp.version == "9.9.9"
 
-    def test_build_mcp_uses_app_version(self):
-        # _build_mcp() wires controllers and the desktop layer; on a normal
-        # dev machine it constructs without touching COM, and the FastMCP
-        # instance must carry the app version (not fastmcp's own).
+    def test_build_mcp_uses_app_version(self, monkeypatch):
+        # _build_mcp() instantiates the real input controller and subscribes a
+        # callback to it. That state lives in module globals and leaks into
+        # later tests (control-gate / snapshot tests observed flaking in the
+        # full-suite run), so a mock controller keeps this test scoped to what
+        # it actually verifies: the FastMCP version wiring. The end-to-end
+        # stdio probe documented in CHANGELOG covers the real wiring.
+        from unittest.mock import MagicMock
+
+        import windows_mcp.desktop.control as control_module
+
+        monkeypatch.setattr(control_module, "get_controller", lambda: MagicMock())
+        monkeypatch.setattr(cli, "_mcp", None)  # bypass the module-level cache
+
         mcp = cli._build_mcp()
+
         expected = importlib.metadata.version("windows-mcp")
         assert mcp.version == expected
         assert mcp.version != __import__("fastmcp").__version__
